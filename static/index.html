@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loldle de Videojuegos</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Videogame Guesser</h1>
+        
+        <!-- Botones de acción -->
+        <button id="start-btn" onclick="startGame()">Start </button>
+        <button id="reset-btn" onclick="resetGame()" disabled>Reset</button>
+        
+        <div id="game-container" style="display:none;">
+            <p id="attempts">Intentos: 0</p>
+            <input type="text" id="guess-input" placeholder="Type the game name" oninput="autocompleteGames()">
+            <div id="autocomplete-results"></div>
+            <p id="message"></p>
+        </div>
+
+        <div id="history-container">
+            <h2>attempts</h2>
+            <ul id="history-list"></ul>
+        </div>
+    </div>
+
+    <script>
+        let targetGame = null;
+        let attempts = 0;
+        let debounceTimer = null;
+    
+        const startBtn = document.getElementById('start-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const guessInput = document.getElementById('guess-input');
+        const messageEl = document.getElementById('message');
+        const attemptsEl = document.getElementById('attempts');
+        const historyList = document.getElementById('history-list');
+        const autocompleteResults = document.getElementById('autocomplete-results');
+    
+        // Iniciar un nuevo juego
+        function startGame() {
+            fetch('/random-game')
+                .then(response => response.json())
+                .then(data => {
+                    targetGame = data;
+                    attempts = 0;
+                    attemptsEl.textContent = `Intentos: ${attempts}`;
+                    messageEl.textContent = '¡Juego iniciado! Intenta adivinar el juego.';
+                    messageEl.style.color = 'black';
+    
+                    // Habilitar el botón de reset
+                    resetBtn.disabled = false;
+                    startBtn.disabled = true; // Deshabilitar el botón de inicio
+    
+                    // Mostrar el contenedor del juego y ocultar los botones
+                    document.getElementById('game-container').style.display = 'block';
+                    guessInput.disabled = false;
+                    guessInput.focus();
+                    historyList.innerHTML = '';
+                    guessInput.value = ''; // Limpiar el input
+                })
+                .catch(error => console.error('Error al iniciar el juego:', error));
+        }
+    
+        // Resetear el juego
+        function resetGame() {
+            startGame();
+        }
+    
+        // Autocompletar juegos mientras escribes con debounce
+        function autocompleteGames() {
+            const query = guessInput.value;
+            if (query.length > 0) {  // 
+                clearTimeout(debounceTimer);  // Limpiar el timer anterior
+                debounceTimer = setTimeout(() => {  // Esperar 300ms antes de hacer la solicitud
+                    fetch(`/autocomplete?query=${query}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            autocompleteResults.innerHTML = '';
+                            if (data.length > 0) {
+                                data.forEach(game => {
+                                    const div = document.createElement('div');
+                                    div.textContent = game;
+                                    div.addEventListener('click', () => handleGuess(game));
+                                    autocompleteResults.appendChild(div);
+                                });
+                            } else {
+                                autocompleteResults.innerHTML = '<div>No hay resultados</div>';
+                            }
+                        })
+                        .catch(error => console.error('Error al obtener sugerencias:', error));
+                }, 300);  // Retraso de 300ms
+            } else {
+                autocompleteResults.innerHTML = '';
+            }
+        }
+    
+        // Función para comparar el juego adivinado
+        function handleGuess(userGuess) {
+            if (!targetGame) {
+                alert('Primero inicia el juego.');
+                return;
+            }
+            attempts++;
+            attemptsEl.textContent = `Intentos: ${attempts}`;
+            
+            fetch('/compare-game', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    target_game: targetGame,
+                    user_guess: userGuess
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message === '¡Correcto!') {
+                    messageEl.textContent = '¡Correcto! Has adivinado el juego.';
+                    messageEl.style.color = 'green';
+                    addToHistory(userGuess, 'Correcto');
+                    guessInput.disabled = true; // Deshabilitar el input después de adivinar correctamente
+                } else {
+                    messageEl.textContent = 'Incorrecto. Similitudes:';
+                    messageEl.style.color = 'red';
+                    showSimilarities(data.similarities);
+                    addToHistory(userGuess, 'Incorrecto');
+                }
+                guessInput.value = ''; // Limpiar el input después de un intento
+                autocompleteResults.innerHTML = ''; // Limpiar los resultados de autocompletar
+            })
+            .catch(error => console.error('Error al comparar el juego:', error));
+        }
+    
+        // Mostrar las similitudes con el juego
+        function showSimilarities(similarities) {
+            let similarityMessage = '';
+            Object.keys(similarities).forEach(key => {
+                similarityMessage += `${key}: ${similarities[key]}<br>`;
+            });
+            messageEl.innerHTML = similarityMessage;
+        }
+    
+        // Agregar el intento al historial
+        function addToHistory(game, result) {
+            const li = document.createElement('li');
+            li.textContent = `${game} - ${result}`;
+            historyList.appendChild(li);
+        }
+    </script>
+    
