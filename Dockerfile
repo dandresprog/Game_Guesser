@@ -1,12 +1,18 @@
-# Usamos la imagen base de Python
-FROM python:3.11
+# Usa una imagen base de Python
+FROM python:3.9-slim
 
-# Establecer el directorio de trabajo en el contenedor
+# Establece el directorio de trabajo
 WORKDIR /app
 
-# Copiar el código de la aplicación al contenedor
+# Copia los archivos de requisitos y los instala
+COPY requirements.txt requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copia el resto de los archivos de la aplicación
 COPY . .
 
+# Expone el puerto en el que la aplicación se ejecutará
+EXPOSE 8000
 
-# luego instalar las dependencias
-RUN pip install --no-cache-dir -r requirements.txt
+# Comando para ejecutar la aplicación
+# RUN uvicorn main:app --reload

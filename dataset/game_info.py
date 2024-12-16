@@ -5,6 +5,8 @@ import pandas as pd
 import requests
 import zipfile
 import io
+import os
+from sqlalchemy import create_engine
 
 response = requests.get('https://www.kaggle.com/api/v1/datasets/download/jummyegg/rawg-game-dataset')
 zip_file = zipfile.ZipFile(io.BytesIO(response.content))
@@ -35,6 +37,11 @@ games['platforms'] = games['platforms'].apply(lambda x: x.replace("||", ", ").st
 games['developers'] = games['developers'].apply(lambda x: x.replace("||", ", ").strip())
 games['publishers'] = games['publishers'].apply(lambda x: x.replace("||", ", ").strip())
 
+db_host = os.getenv('DB_HOST', 'localhost')
+db_name = os.getenv('DB_NAME', 'videogames_db')
+db_user = os.getenv('DB_USER', 'user')
+db_password = os.getenv('DB_PASSWORD', 'password')
 
-games.to_csv('game_info_cleaned.csv')
+engine = create_engine(f'postgresql://{db_user}:{db_password}@{db_host}:5432/{db_name}')
+games.to_sql('videojuegos', engine, if_exists='replace', index=False)
 

@@ -3,6 +3,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.responses import FileResponse
 import psycopg2
 from random import randint
+import os
 
 
 app = FastAPI()
@@ -12,10 +13,10 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 def get_connection():
     return psycopg2.connect(
-        dbname="videogames_db",
-        user="user",
-        password="password",
-        host="localhost",  
+        dbname=os.getenv('DB_NAME', 'videogames_db'),
+        user=os.getenv('DB_USER', 'user'),
+        password=os.getenv('DB_PASSWORD', 'password'),
+        host=os.getenv('DB_HOST', 'localhost'),  
         port="5432"
     )
 
