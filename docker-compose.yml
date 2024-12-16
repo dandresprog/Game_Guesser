@@ -25,6 +25,7 @@ services:
       context: .
     depends_on:
       - db
+      - data_loader
     environment:
       DB_HOST: db
       DB_NAME: videogames_db

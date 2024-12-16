@@ -31,6 +31,10 @@
         let targetGame = null;
         let attempts = 0;
         let debounceTimer = null;
+        let currentStreak = 0;
+        let totalScore = 0;
+        let gamesPlayed = 0;
+        let correctGuessCount = 0;
     
         const startBtn = document.getElementById('start-btn');
         const resetBtn = document.getElementById('reset-btn');
@@ -148,6 +152,180 @@
             const li = document.createElement('li');
             li.textContent = `${game} - ${result}`;
             historyList.appendChild(li);
+        }
+
+
+
+
+                // Función para capturar el progreso del juego
+        function captureGameProgress() {
+            return {
+                currentStreak: currentStreak,
+                totalScore: totalScore,
+                gamesPlayed: gamesPlayed,
+                correctGuessCount: correctGuessCount,
+                attempts: attempts,
+                timestamp: new Date().toISOString()
+            };
+        }
+
+        // Función para guardar progreso
+        async function saveProgress() {
+            const progressData = captureGameProgress();
+            
+            try {
+                const response = await fetch('/guardar_progreso', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(progressData)
+                });
+                const result = await response.json();
+                console.log('Progreso guardado:', result);
+            } catch (error) {
+                console.error('Error guardando progreso:', error);
+            }
+        }
+
+        // Función para cargar progreso
+        async function loadProgress() {
+            try {
+                const response = await fetch('/obtener_progreso');
+                const progressData = await response.json();
+                
+                if (Object.keys(progressData).length > 0) {
+                    // Restaurar datos de progreso
+                    currentStreak = progressData.currentStreak || 0;
+                    totalScore = progressData.totalScore || 0;
+                    gamesPlayed = progressData.gamesPlayed || 0;
+                    correctGuessCount = progressData.correctGuessCount || 0;
+                    
+                    // Opcional: actualizar UI con datos de progreso
+                    updateProgressUI();
+                }
+            } catch (error) {
+                console.error('Error cargando progreso:', error);
+            }
+        }
+
+        // Función para actualizar la UI con el progreso
+        function updateProgressUI() {
+            // Puedes añadir elementos en el HTML para mostrar estas estadísticas
+            // Por ejemplo:
+            const statsContainer = document.createElement('div');
+            statsContainer.id = 'game-stats';
+            statsContainer.innerHTML = `
+                <h3>Game Stats</h3>
+                <p>Games Played: ${gamesPlayed}</p>
+                <p>Correct Guesses: ${correctGuessCount}</p>
+                <p>Current Streak: ${currentStreak}</p>
+                <p>Total Score: ${totalScore}</p>
+            `;
+            
+            // Insertar antes o después de un elemento existente
+            document.querySelector('.container').insertAdjacentElement('beforeend', statsContainer);
+        }
+
+        // Modificar startGame para incrementar contadores
+        function startGame() {
+            fetch('/random-game')
+                .then(response => response.json())
+                .then(data => {
+                    targetGame = data;
+                    attempts = 0;
+                    gamesPlayed++; // Incrementar juegos jugados
+                    
+                    attemptsEl.textContent = `Intentos: ${attempts}`;
+                    messageEl.textContent = '¡Juego iniciado! Intenta adivinar el juego.';
+                    messageEl.style.color = 'black';
+
+                    resetBtn.disabled = false;
+                    startBtn.disabled = true;
+
+                    document.getElementById('game-container').style.display = 'block';
+                    guessInput.disabled = false;
+                    guessInput.focus();
+                    historyList.innerHTML = '';
+                    guessInput.value = '';
+
+                    // Guardar progreso al iniciar un nuevo juego
+                    saveProgress();
+                })
+                .catch(error => console.error('Error al iniciar el juego:', error));
+        }
+
+        // Modificar handleGuess para actualizar progreso
+        function handleGuess(userGuess) {
+            if (!targetGame) {
+                alert('Primero inicia el juego.');
+                return;
+            }
+            attempts++;
+            attemptsEl.textContent = `Intentos: ${attempts}`;
+            
+            fetch('/compare-game', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    target_game: targetGame,
+                    user_guess: userGuess
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message === '¡Correcto!') {
+                    messageEl.textContent = '¡Correcto! Has adivinado el juego.';
+                    messageEl.style.color = 'green';
+                    addToHistory(userGuess, 'Correcto');
+                    guessInput.disabled = true;
+                    
+                    // Actualizar estadísticas de progreso
+                    currentStreak++;
+                    correctGuessCount++;
+                    totalScore += 10; // Puntuación por adivinar
+                } else {
+                    messageEl.textContent = 'Incorrecto. Similitudes:';
+                    messageEl.style.color = 'red';
+                    showSimilarities(data.similarities);
+                    addToHistory(userGuess, 'Incorrecto');
+                    
+                    // Reiniciar racha si es incorrecto
+                    currentStreak = 0;
+                }
+                
+                // Guardar progreso después de cada intento
+                saveProgress();
+                
+                guessInput.value = '';
+                autocompleteResults.innerHTML = '';
+            })
+            .catch(error => console.error('Error al comparar el juego:', error));
+        }
+
+        // Añadir event listeners para cargar progreso
+        document.addEventListener('DOMContentLoaded', () => {
+            // Cargar progreso al iniciar la página
+            loadProgress();
+            
+            // Guardar progreso antes de cerrar la página
+            window.addEventListener('beforeunload', saveProgress);
+        });
+
+        // Modificar resetGame para restablecer contadores si es necesario
+        function resetGame() {
+            // Opcional: preguntar si quiere reiniciar las estadísticas
+            const resetStats = confirm('¿Quieres reiniciar todas las estadísticas?');
+            if (resetStats) {
+                currentStreak = 0;
+                totalScore = 0;
+                gamesPlayed = 0;
+                correctGuessCount = 0;
+                updateProgressUI();
+            }
+            
+            // Reiniciar juego
+            startGame();
         }
     </script>
     
