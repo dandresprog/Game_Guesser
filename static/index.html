@@ -102,50 +102,71 @@
             }
         }
     
-        // Función para comparar el juego adivinado
         function handleGuess(userGuess) {
             if (!targetGame) {
                 alert('Primero inicia el juego.');
                 return;
             }
+
+            // Incrementar intentos y actualizar el contador
             attempts++;
             attemptsEl.textContent = `Intentos: ${attempts}`;
             
+            // Solicitud al backend para comparar juegos
             fetch('/compare-game', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    target_game: targetGame,
-                    user_guess: userGuess
+                    target_game: targetGame, // Juego objetivo (a adivinar)
+                    user_guess: userGuess   // Juego propuesto por el usuario
                 })
             })
             .then(response => response.json())
             .then(data => {
                 if (data.message === '¡Correcto!') {
+                    // Si el usuario adivina correctamente
                     messageEl.textContent = '¡Correcto! Has adivinado el juego.';
                     messageEl.style.color = 'green';
                     addToHistory(userGuess, 'Correcto');
-                    guessInput.disabled = true; // Deshabilitar el input después de adivinar correctamente
+                    guessInput.disabled = true; // Deshabilitar input después de ganar
+                    resetBtn.disabled = false; // Habilitar el botón de reinicio
                 } else {
+                    // Mostrar mensaje de error y similitudes
                     messageEl.textContent = 'Incorrecto. Similitudes:';
                     messageEl.style.color = 'red';
                     showSimilarities(data.similarities);
                     addToHistory(userGuess, 'Incorrecto');
                 }
-                guessInput.value = ''; // Limpiar el input después de un intento
-                autocompleteResults.innerHTML = ''; // Limpiar los resultados de autocompletar
+
+                // Limpiar input y autocompletar después de cada intento
+                guessInput.value = '';
+                autocompleteResults.innerHTML = '';
             })
             .catch(error => console.error('Error al comparar el juego:', error));
         }
-    
-        // Mostrar las similitudes con el juego
+
         function showSimilarities(similarities) {
             let similarityMessage = '';
+
+            // Iterar sobre las claves del objeto "similarities" y mostrar con colores
             Object.keys(similarities).forEach(key => {
-                similarityMessage += `${key}: ${similarities[key]}<br>`;
+                let color = similarities[key].color || 'black'; // Color por defecto
+                similarityMessage += `
+                    <div class="similarity ${color}">
+                        <strong>${key}:</strong> ${similarities[key].value}
+                    </div>`;
             });
+
+            // Inyectar el mensaje en el contenedor de mensajes
             messageEl.innerHTML = similarityMessage;
-        }
+}
+
+
+
+
+
+
+    
     
         // Agregar el intento al historial
         function addToHistory(game, result) {

@@ -1,12 +1,13 @@
+import os
+import uuid
+import json
+import psycopg2
+import difflib
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 from starlette.responses import FileResponse
-import psycopg2
 from random import randint
-import os
-import uuid
-import json
 from contextlib import asynccontextmanager
 
 
@@ -24,6 +25,37 @@ def get_connection():
         port="5432"
     )
 
+# Función similitud entre cadenas y verificar coincidencia por prefijo
+def similarity_ratio(str1, str2):
+    return difflib.SequenceMatcher(None, str1, str2).ratio()
+
+def compare_names(target_name, user_name):
+    # Ambos comienzan con la misma letra
+    if target_name[0].lower() == user_name[0].lower():
+        prefix_similarity = 0.8  # Un umbral bajo si empieza con la misma letra
+    else:
+        prefix_similarity = 0.0
+
+    # Usar difflib para calcular la similitud completa
+    full_similarity = similarity_ratio(target_name, user_name)
+    
+    # Si la similitud completa es alta o la coincidencia de prefijo es suficiente, considerarlo similar
+    if full_similarity > 0.7 or prefix_similarity > 0.7:
+        return "yellow", user_name  # Coincidencia parcial
+    else:
+        return "red", user_name  # Coincidencia baja
+    
+# Función para comparar listas de elementos
+def compare_lists(target_list, user_list):
+    """Compara listas para encontrar elementos comunes."""
+    target_set = set(target_list.split(", "))
+    user_set = set(user_list.split(", "))
+    common = target_set & user_set
+    if common:
+        if target_set == user_set:
+            return "green", ", ".join(user_set)  # Todos coinciden
+        return "yellow", ", ".join(common)  # Coincidencias parciales
+    return "red", user_list  # No hay coincidencias
 
 # Ruta para la página principal
 @app.get("/")
@@ -80,8 +112,7 @@ def compare_game(data: dict):
     target_game = data.get("target_game")
     user_guess = data.get("user_guess")
  
-    print(target_game)
-    print(user_guess)
+    similarities = {}
 
     if not user_guess or not target_game:
         return {"error": "Invalid input data"}
@@ -100,8 +131,7 @@ def compare_game(data: dict):
     game = cursor.fetchone()
     # Cerrar la conexión
     conn.close()
- 
- 
+
     # Extraer la información del juego adivinado
     user_game_data = {
         "name": game[0],
@@ -116,36 +146,73 @@ def compare_game(data: dict):
     # Extraer la información del juego objetivo
     target_game_data = {
         "name": target_game[0],
-        "metacritic": target_game[1] if target_game[1] else "Desconocido",
-        "released_year": target_game[2] if target_game[2] else "Desconocido",
-        "platforms": target_game[3] if target_game[3] else "Desconocido",
-        "developers": target_game[4] if target_game[4] else "Desconocido",
-        "genres": target_game[5] if target_game[5] else "Desconocido",
-        "publishers": target_game[6] if target_game[6] else "Desconocido"
+        "metacritic": target_game[1],
+        "released_year": target_game[2],
+        "platforms": target_game[3],
+        "developers": target_game[4],
+        "genres": target_game[5],
+        "publishers": target_game[6]
     }
 
     print(user_game_data)
     print(target_game_data)
-
-    # Comparar los datos de ambos juegos
-    similarities = {}
-    is_correct = True
-    for key in user_game_data:
-        if user_game_data[key] == target_game_data[key]:
-            similarities[key] = True
-        else:
-            similarities[key] = False
-        if not similarities[key]:
-            is_correct = False
-            
-    if is_correct:
-        return {
-            "message": "¡Correcto!",
-            "similarities": similarities
-        }
     
-    # Si no es correcto, devolver las similitudes
-    return {"similarities": similarities}
+    # Comparar las listas de elementos
+    # Comparar el nombre
+    color, name_value = compare_names(target_game_data["name"], user_game_data["name"])
+    similarities["name"] = {
+        "value": name_value,
+        "color": color
+    }
+        # Comparar Metacritic con flechas
+    target_metacritic = float(target_game_data.get("metacritic", 0))
+    user_metacritic = float(user_game_data.get("metacritic", 0))
+    if user_metacritic < target_metacritic:
+        arrow = "↑"
+    elif user_metacritic > target_metacritic:
+        arrow = "↓"
+    else:
+        arrow = "="
+
+    similarities["metacritic"] = {
+        "value": f"{user_metacritic} {arrow}",
+        "color": "green" if user_metacritic == target_metacritic else "red"
+    }
+
+    # Comparar año de salida
+    target_year = int(target_game_data.get("released_year", 0))
+    user_year = int(user_game_data.get("released_year", 0))
+    if user_year < target_year:
+        arrow = "↑"
+    elif user_year > target_year:
+        arrow = "↓"
+    else:
+        arrow = "="
+
+    similarities["released_year"] = {
+        "value": f"{user_year} {arrow}",
+        "color": "green" if user_year == target_year else "red"
+    }
+
+    # Comparar Platforms
+    color, value = compare_lists(target_game_data.get("platforms", ""), user_game_data.get("platforms", ""))
+    similarities["platforms"] = {"value": value, "color": color}
+
+    # Comparar Developers
+    color, value = compare_lists(target_game_data.get("developers", ""), user_game_data.get("developers", ""))
+    similarities["developers"] = {"value": value, "color": color}
+
+    # Comparar Genres
+    color, value = compare_lists(target_game_data.get("genres", ""), user_game_data.get("genres", ""))
+    similarities["genres"] = {"value": value, "color": color}
+
+    # Comparar Publishers
+    color, value = compare_lists(target_game_data.get("publishers", ""), user_game_data.get("publishers", ""))
+    similarities["publishers"] = {"value": value, "color": color}
+
+
+    return JSONResponse({"similarities": similarities})
+
 
 @asynccontextmanager
 async def get_db_connection():

@@ -52,3 +52,28 @@ input {
 #history-list li {
     margin: 5px 0;
 }
+
+.similarity {
+    margin: 5px 0;
+    padding: 10px;
+    border-radius: 8px;
+    font-weight: bold;
+    font-size: 1rem;
+    background-color: #f0f0f0;  /* Color claro de fondo por defecto */
+    color: black; /* Texto negro */
+    box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.1); /* Sombra ligera */
+    transition: background-color 0.3s ease;
+}
+
+/* Colores específicos para cada similitud */
+.similarity.green {
+    background-color: #c8e6c9; /* Verde pastel */
+}
+
+.similarity.yellow {
+    background-color: #fff9c4; /* Amarillo pastel */
+}
+
+.similarity.red {
+    background-color: #ffcdd2; /* Rojo pastel */
+}
