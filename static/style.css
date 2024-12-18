@@ -327,3 +327,27 @@ input {
         transform: translate(-50%, -50%) scale(1);
     }
 }
+
+#hint-popup {
+    position: fixed;
+    top: 50%;
+    left: 0;
+    width: 300px;   /* Ancho fijo */
+    background-color:#333;
+    color: white;
+    font-style: italic;
+    font-weight: bold;
+    padding: 10px 15px;
+    border-radius: 5px;
+    text-align: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.5s ease, visibility 0.5s ease;
+    transform: translateY(-50%);
+}
+
+#hint-popup.show {
+    opacity: 1;
+    visibility: visible;
+}
+

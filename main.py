@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse
 from starlette.responses import FileResponse
 from random import randint
 from contextlib import asynccontextmanager
+from huggingface_hub import InferenceClient
 
 logger = logging.getLogger(__name__)
 
@@ -240,6 +241,41 @@ def compare_game(data: dict):
         return JSONResponse({"message": "Correcto" ,"similarities": similarities})
     else:
         return JSONResponse({"message": "Incorrecto","similarities": similarities})
+
+@app.post("/get-hint")
+async def get_hint(request: Request):
+    # Obtener los datos de entrada
+    data = await request.json()
+    target_game = data.get("target_game")
+
+    print(target_game)
+    target_game_data = {
+        "Nombre": target_game[0],
+    }
+
+    name = target_game_data.get("Nombre", "")
+
+    print(name)
+
+    client = InferenceClient(api_key="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")
+
+    messages = [
+        {
+            "role": "user",
+            "content": f"Descripcion simple, muy corta y clara de {name} en español, para intentar adivinarlo, sin mencionar el nombre o nada relevante"
+        }
+    ]
+
+    completion = client.chat.completions.create(
+        model="mistralai/Mistral-7B-Instruct-v0.2", 
+        messages=messages, 
+        max_tokens=50
+    )
+    # Extraer y devolver la pista
+    hint = completion.choices[0].message['content']
+    print(hint)
+
+    return JSONResponse({"hint": hint})
 
 
 def generar_user_id():

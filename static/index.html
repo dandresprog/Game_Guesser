@@ -40,6 +40,8 @@
             </div>
         </div>
 
+        <div id="hint-popup" class="hidden">"Pista aquí..."</div>
+
         
         <button class="help-button" onclick="toggleHelpPopup()">?</button>
 
@@ -120,7 +122,9 @@
         // Resetear el juego
         function resetGame() {
             const resultsContainer = document.getElementById('results');
+            const hintPopup = document.getElementById('hint-popup');
             resultsContainer.innerHTML = '';
+            hintPopup.classList.remove('show');
             startGame();
 
         }
@@ -162,6 +166,19 @@
                 return;
             }
             attempts++;
+            if (attempts === 4) {
+                fetch('/get-hint', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ target_game: targetGame })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    const hintPopup = document.getElementById('hint-popup');
+                    hintPopup.textContent = `"${data.hint}..."`;
+                    hintPopup.classList.add('show');
+                })
+            }
             attemptsEl.textContent = `Intentos: ${attempts}`;
             
             // Solicitud al backend para comparar juegos
