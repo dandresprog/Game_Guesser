@@ -39,6 +39,34 @@
                 <div id="progressData"></div>
             </div>
         </div>
+
+        
+        <button class="help-button" onclick="toggleHelpPopup()">?</button>
+
+        
+        <div id="help-popup" class="help-popup">
+            <div class="help-popup-content">
+                <button class="close-popup" onclick="toggleHelpPopup()">✖</button>
+                <h2>¡Bienvenido a Game Guesser!</h2>
+                <p>El objetivo del juego es adivinar el nombre de un videojuego. Ingresa tus intentos en el cuadro de texto y observa las pistas si tienes dificultades.<br><br></p>
+                <p><strong>Explicación Similitudes:<br><br></strong></p>
+                <ul>
+                    <li>   Si la casilla está <span style="color: red;">roja</span>, significa que no coincide en nada. Si es el caso de "Año" o "Metacritic", mostrará una flecha que indicará si es menor o mayor que el dato a adivinar.</li>
+                    <li>   Si la casilla es <span style="color: orange;">amarilla</span>, es que coincide parcialmente los datos de ambos juegos.</li>
+                    <li>   Si la casilla es <span style="color: green;">verde</span>, ¡Perfecto! Has logrado acertar una de las categorías.<br><br></li>
+                </ul>
+                <p></p>
+                <p><strong>Fin del Juego:<br></strong></p>
+                <p>El juego termina una vez hayas acertado todas las casillas. En este caso, significa que has acertado el juego.<br><br></p>
+                <p><strong>¡Buena suerte!</strong></p>
+            </div>
+        </div>
+
+        <div id="victory-message" class="victory-message">
+            <h2>¡Felicidades, has ganado!</h2>
+            <button onclick="hideVictoryMessage()">Cerrar</button>
+        </div>
+        
     </div>
 </body>
 </html>
@@ -154,6 +182,7 @@
                     messageEl.style.color = 'green';
                     messageEl.style.fontWeight = 'bold';
                     addToHistory(userGuess, 'Correcto');
+                    showSimilarities(data.similarities);
                     guessInput.disabled = true; 
                     resetBtn.disabled = false; 
 
@@ -161,7 +190,7 @@
                     currentStreak++;
                     correctGuessCount++;
                     totalScore += 10;
-                    alert('¡Felicidades! Has adivinado el juego.');
+                    showVictoryMessage();
 
                 } else {
                     showSimilarities(data.similarities);
@@ -285,7 +314,23 @@
             }
         }
     
-    
+        function toggleHelpPopup() {
+            const helpPopup = document.getElementById('help-popup');
+            helpPopup.style.display = helpPopup.style.display === 'flex' ? 'none' : 'flex';
+        }
+
+
+        function showVictoryMessage() {
+            const victoryMessage = document.getElementById('victory-message');
+            victoryMessage.style.display = 'block'; // Muestra el mensaje
+        }
+
+        function hideVictoryMessage() {
+            const victoryMessage = document.getElementById('victory-message');
+            victoryMessage.style.display = 'none'; // Oculta el mensaje
+        }
+
+
     </script>
 </body>
 </html>

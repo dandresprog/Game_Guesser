@@ -59,16 +59,17 @@ def compare_names(target_name, user_name):
     full_similarity = similarity_ratio(target_name, user_name)
 
     # Establecer umbrales de similitud:
-    # - Si hay más del 50% de coincidencias de palabras, es una coincidencia parcial (amarillo).
-    # - Si la similitud general es mayor al 80% o si las palabras coinciden mucho, es una coincidencia alta (verde).
-    if word_match_count >= 3 or full_similarity > 0.8:
-        color = "green"
-    elif word_match_count > 0 or full_similarity > 0.6:
-        color = "yellow"
+    # - Si hay más del 80% de coincidencias de palabras, es una coincidencia parcial (amarillo).
+    # - Si es igual, es una coincidencia total (verde).
+    # - De lo contrario, no hay coincidencia (rojo).
+    if full_similarity == 1:
+        return "green", user_name
+    elif word_match_count / len(target_words) > 0.7:
+        return "yellow", user_name
     else:
-        color = "red"
+        return "red", user_name
 
-    return color, user_name
+
 # Función para comparar listas de elementos
 def compare_lists(target_list, user_list):
     """Compara listas para encontrar elementos comunes."""
@@ -158,24 +159,24 @@ def compare_game(data: dict):
 
     # Extraer la información del juego adivinado
     user_game_data = {
-        "name": game[0],
-        "metacritic": game[1] if game[1] else "Desconocido",
-        "released_year": game[2] if game[2] else "Desconocido",
-        "platforms": game[3] if game[3] else "Desconocido",
-        "developers": game[4] if game[4] else "Desconocido",
-        "genres": game[5] if game[5] else "Desconocido",
-        "publishers": game[6] if game[6] else "Desconocido"
+        "Nombre": game[0],
+        "Metacritic": game[1] if game[1] else "Desconocido",
+        "Año": game[2] if game[2] else "Desconocido",
+        "Plataformas": game[3] if game[3] else "Desconocido",
+        "Desarrolladores": game[4] if game[4] else "Desconocido",
+        "Generos": game[5] if game[5] else "Desconocido",
+        "Publicadores": game[6] if game[6] else "Desconocido"
     }
 
     # Extraer la información del juego objetivo
     target_game_data = {
-        "name": target_game[0],
-        "metacritic": target_game[1],
-        "released_year": target_game[2],
-        "platforms": target_game[3],
-        "developers": target_game[4],
-        "genres": target_game[5],
-        "publishers": target_game[6]
+        "Nombre": target_game[0],
+        "Metacritic": target_game[1],
+        "Año": target_game[2],
+        "Plataformas": target_game[3],
+        "Desarrolladores": target_game[4],
+        "Generos": target_game[5],
+        "Publicadores": target_game[6]
     }
 
     print(user_game_data)
@@ -184,28 +185,28 @@ def compare_game(data: dict):
     
 
     # Comparar el nombre usando la nueva función de similitud mejorada
-    color ,name_value= compare_names(target_game_data["name"], user_game_data["name"])
-    similarities["name"] = {
+    color ,name_value= compare_names(target_game_data["Nombre"], user_game_data["Nombre"])
+    similarities["Nombre"] = {
         "value": name_value,
         "color": color
     }
         # Comparar Metacritic con flechas
-    target_metacritic = float(target_game_data.get("metacritic", 0))
-    user_metacritic = float(user_game_data.get("metacritic", 0))
+    target_metacritic = float(target_game_data.get("Metacritic", 0))
+    user_metacritic = float(user_game_data.get("Metacritic", 0))
     if user_metacritic < target_metacritic:
         arrow = "↑"
     elif user_metacritic > target_metacritic:
         arrow = "↓"
     else:
         arrow = "="
-    similarities["metacritic"] = {
+    similarities["Metacritic"] = {
         "value": f"{user_metacritic} {arrow}",
         "color": "green" if user_metacritic == target_metacritic else "red"
     }
 
     # Comparar año de salida
-    target_year = int(target_game_data.get("released_year", 0))
-    user_year = int(user_game_data.get("released_year", 0))
+    target_year = int(target_game_data.get("Año", 0))
+    user_year = int(user_game_data.get("Año", 0))
     if user_year < target_year:
         arrow = "↑"
     elif user_year > target_year:
@@ -213,26 +214,26 @@ def compare_game(data: dict):
     else:
         arrow = "="
 
-    similarities["released_year"] = {
+    similarities["Año"] = {
         "value": f"{user_year} {arrow}",
         "color": "green" if user_year == target_year else "red"
     }
 
     # Comparar Platforms
-    color, value = compare_lists(target_game_data.get("platforms", ""), user_game_data.get("platforms", ""))
-    similarities["platforms"] = {"value": value, "color": color}
+    color, value = compare_lists(target_game_data.get("Plataformas", ""), user_game_data.get("Plataformas", ""))
+    similarities["Plataformas"] = {"value": value, "color": color}
 
     # Comparar Developers
-    color, value = compare_lists(target_game_data.get("developers", ""), user_game_data.get("developers", ""))
-    similarities["developers"] = {"value": value, "color": color}
+    color, value = compare_lists(target_game_data.get("Desarrolladores", ""), user_game_data.get("Desarrolladores", ""))
+    similarities["Desarrolladores"] = {"value": value, "color": color}
 
     # Comparar Genres
-    color, value = compare_lists(target_game_data.get("genres", ""), user_game_data.get("genres", ""))
-    similarities["genres"] = {"value": value, "color": color}
+    color, value = compare_lists(target_game_data.get("Generos", ""), user_game_data.get("Generos", ""))
+    similarities["Generos"] = {"value": value, "color": color}
 
     # Comparar Publishers
-    color, value = compare_lists(target_game_data.get("publishers", ""), user_game_data.get("publishers", ""))
-    similarities["publishers"] = {"value": value, "color": color}
+    color, value = compare_lists(target_game_data.get("Publicadores", ""), user_game_data.get("Publicadores", ""))
+    similarities["Publicadores"] = {"value": value, "color": color}
     
     print (similarities)
     if all([value["color"] == "green" for value in similarities.values()]):
