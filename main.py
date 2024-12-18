@@ -3,6 +3,7 @@ import uuid
 import json
 import psycopg2
 import difflib
+import logging
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
@@ -10,21 +11,36 @@ from starlette.responses import FileResponse
 from random import randint
 from contextlib import asynccontextmanager
 
+logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
 # Montar la carpeta "static" para servir archivos estáticos
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-def get_connection():
+def get_videogames_db_connection():
     return psycopg2.connect(
         dbname=os.getenv('DB_NAME', 'videogames_db'),
         user=os.getenv('DB_USER', 'user'),
         password=os.getenv('DB_PASSWORD', 'password'),
         host=os.getenv('DB_HOST', 'localhost'),  
-        port="5432"
+        port=os.getenv('DB_PORT', '5432')
     )
 
+@asynccontextmanager
+async def get_users_db_connection():
+    conn = psycopg2.connect(
+        dbname=os.getenv('USER_DB_NAME', 'users_db'),
+        user=os.getenv('USER_DB_USER', 'user'),
+        password=os.getenv('USER_DB_PASSWORD', 'password'),
+        host=os.getenv('USER_DB_HOST', 'localhost'),
+        port=os.getenv('USER_DB_PORT', '5432')
+    )
+    try:
+        yield conn
+    finally:
+        conn.close()
+    
 # Función similitud entre cadenas y verificar coincidencia por prefijo
 def similarity_ratio(str1, str2):
     return difflib.SequenceMatcher(None, str1, str2).ratio()
@@ -66,7 +82,7 @@ def read_root():
 @app.get("/random-game")
 def get_random_game():
     try:
-        conn = get_connection()
+        conn = get_videogames_db_connection()
         cursor = conn.cursor()
 
         # Seleccionar un juego aleatorio directamente desde la base de datos
@@ -92,7 +108,7 @@ def get_random_game():
 @app.get("/autocomplete")
 def autocomplete_games(query: str):
     try:
-        conn = get_connection()  # Obtener conexión del pool
+        conn = get_videogames_db_connection()  # Obtener conexión del pool
         cursor = conn.cursor()
 
         # Buscar juegos que coincidan con la consulta
@@ -118,7 +134,7 @@ def compare_game(data: dict):
         return {"error": "Invalid input data"}
 
     # Establecer la conexión a la base de datos
-    conn = get_connection()
+    conn = get_videogames_db_connection()
     cursor = conn.cursor()
 
     # Obtener el juego adivinado (user_guess) desde la base de datos
@@ -164,6 +180,11 @@ def compare_game(data: dict):
         "value": name_value,
         "color": color
     }
+
+    # Verificar si el nombre coincide
+    if target_game_data["name"].lower() == user_game_data["name"].lower():
+        return JSONResponse({"message": "¡Correcto!"})
+    
         # Comparar Metacritic con flechas
     target_metacritic = float(target_game_data.get("metacritic", 0))
     user_metacritic = float(user_game_data.get("metacritic", 0))
@@ -213,21 +234,6 @@ def compare_game(data: dict):
 
     return JSONResponse({"similarities": similarities})
 
-
-@asynccontextmanager
-async def get_db_connection():
-    conn = psycopg2.connect(
-        dbname=os.getenv('DB_NAME', 'videogames_db'),
-        user=os.getenv('DB_USER', 'user'),
-        password=os.getenv('DB_PASSWORD', 'password'),
-        host=os.getenv('DB_HOST', 'localhost'),  
-        port="5432"
-    )
-    try:
-        yield conn
-    finally:
-        conn.close()
-
 def generar_user_id():
     return str(uuid.uuid4())
 
@@ -265,14 +271,18 @@ async def guardar_progreso(request: Request, datos_progreso: dict):
     SET datos_progreso = %s, fecha = NOW()
     """
     
-    async with get_db_connection() as conn:
+    async with get_users_db_connection() as conn:
         with conn.cursor() as cursor:
             try:
+                logger.info("Ejecutando consulta: %s", query)
+                logger.info("Con parámetros: %s, %s", user_id, json.dumps(datos_progreso))
                 cursor.execute(query, (user_id, json.dumps(datos_progreso), json.dumps(datos_progreso)))
                 conn.commit()
+                logger.info("Commit exitoso")
                 return {"status": "progreso guardado"}
             except Exception as e:
                 conn.rollback()
+                logger.error("Error al guardar el progreso: %s", str(e))
                 return {"error": str(e)}
 
 
@@ -282,7 +292,7 @@ async def obtener_progreso(request: Request):
     
     query = "SELECT datos_progreso FROM progreso_usuarios WHERE user_id = %s"
     
-    async with get_db_connection() as conn:
+    async with get_users_db_connection() as conn:
         with conn.cursor() as cursor:
             cursor.execute(query, (user_id,))
             resultado = cursor.fetchone()
@@ -293,21 +303,3 @@ async def obtener_progreso(request: Request):
     else:
         return JSONResponse(content={}, status_code=404)
 
-
-@app.on_event("startup")
-async def startup_event():
-    async with get_db_connection() as conn:
-        with conn.cursor() as cursor:
-            create_table_query = """
-            CREATE TABLE IF NOT EXISTS progreso_usuarios (
-                user_id VARCHAR(36) PRIMARY KEY,
-                datos_progreso JSONB,
-                fecha TIMESTAMP DEFAULT NOW()
-            );
-
-            CREATE INDEX IF NOT EXISTS idx_user_id ON progreso_usuarios(user_id);
-            """
-            
-            cursor.execute(create_table_query)
-            conn.commit()
-            print("Tabla de progreso de usuarios verificada/creada exitosamente")

@@ -7,6 +7,20 @@ services:
       POSTGRES_DB: videogames_db
     ports:
       - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  user_db:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: users_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - users_db_data:/var/lib/postgresql/data
+      - ./users_db/init_user_db.sql:/docker-entrypoint-initdb.d/init_user_db.sql
 
   data_loader:
     build:
@@ -25,12 +39,23 @@ services:
       context: .
     depends_on:
       - db
+      - user_db
       - data_loader
     environment:
       DB_HOST: db
       DB_NAME: videogames_db
       DB_USER: user
       DB_PASSWORD: password
+      DB_PORT: 5432
+      USER_DB_HOST: user_db
+      USER_DB_NAME: users_db
+      USER_DB_USER: user
+      USER_DB_PASSWORD: password
+      USER_DB_PORT: 5432
     ports:
       - "8000:8000"
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+volumes:
+  db_data:
+  users_db_data:

@@ -77,3 +77,18 @@ input {
 .similarity.red {
     background-color: #ffcdd2; /* Rojo pastel */
 }
+
+.progress-tab {
+    position: fixed;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: #f1f1f1;
+    border: 1px solid #ccc;
+    padding: 10px;
+    z-index: 1000;
+}
+
+.progress-content {
+    display: none;
+}
