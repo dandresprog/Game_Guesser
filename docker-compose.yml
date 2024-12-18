@@ -32,7 +32,7 @@ services:
       DB_NAME: videogames_db
       DB_USER: user
       DB_PASSWORD: password
-    command: ["python", "dataset/game_info.py"]
+    command: ["python", "videogames_db/game_info.py"]
 
   api:
     build:
