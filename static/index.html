@@ -3,38 +3,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Loldle de Videojuegos</title>
+    <title>Game Guesser</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <div class="container">
-        <h1>Videogame Guesser</h1>
+    <div class="app-container">
+        <h1>Game Guesser</h1>
         
-        <!-- Botones de acción -->
-        <button id="start-btn" onclick="startGame()">Start </button>
-        <button id="reset-btn" onclick="resetGame()" disabled>Reset</button>
+        <div class="button-container">
+            <button id="start-btn" onclick="startGame()">Iniciar Juego</button>
+            <button id="reset-btn" onclick="resetGame()" disabled>Resetear Juego</button>
+        </div>
         
-        <div id="game-container" style="display:none;">
-            <p id="attempts">Intentos: 0</p>
-            <input type="text" id="guess-input" placeholder="Type the game name" oninput="autocompleteGames()">
-            <div id="autocomplete-results"></div>
-            <p id="message"></p>
+        <div id="game-container" class="game-container">
+            <p id="attempts"></p>
+            <input type="text" id="guess-input" placeholder="Adivina el juego..." oninput="autocompleteGames()" autocomplete="off">
+            <div id="autocomplete-results" class="autocomplete-results"></div>
+            <p id="message" class="message"></p>
         </div>
 
-        <div id="history-container">
-            <h2>attempts</h2>
-            <ul id="history-list"></ul>
+        <div id="resultsContainer" class="resultsContainer">
+            <h2>Resultados Similares</h2>
+            <div id="results"></div>
+        </div>
+
+        <div id="history-container" class="history-container">
+            <h2>Historial </h2>
+            <ul id="history-list" class="history-list"></ul>
         </div>
 
         <div id="progress-tab" class="progress-tab">
             <button id="toggle-progress-btn" onclick="toggleProgressTab()">Mostrar Progreso</button>
             <div id="progress-content" class="progress-content" style="display: none;">
-                <h2>Progreso</h2>
+                <h2>Progreso de Juego</h2>
                 <div id="progressData"></div>
             </div>
         </div>
     </div>
-
+</body>
+</html>
     <script>
         let targetGame = null;
         let attempts = 0;
@@ -61,8 +68,10 @@
                     attempts = 0;
                     gamesPlayed++;
                     attemptsEl.textContent = `Intentos: ${attempts}`;
+                    attemptsEl.style.color = 'white';
+                    attemptsEl.style.fontWeight = 'bold';
                     messageEl.textContent = '¡Juego iniciado! Intenta adivinar el juego.';
-                    messageEl.style.color = 'black';
+                    messageEl.style.color = 'white';
     
                     // Habilitar el botón de reset
                     resetBtn.disabled = false;
@@ -82,15 +91,20 @@
     
         // Resetear el juego
         function resetGame() {
+            const resultsContainer = document.getElementById('results');
+            resultsContainer.innerHTML = '';
             startGame();
+
         }
     
-        // Autocompletar juegos mientras escribes con debounce
+        // Autocompletar juegos mientras escribes 
         function autocompleteGames() {
             const query = guessInput.value;
-            if (query.length > 0) {  // 
-                clearTimeout(debounceTimer);  // Limpiar el timer anterior
-                debounceTimer = setTimeout(() => {  // Esperar 300ms antes de hacer la solicitud
+            const resultsContainer = document.getElementById("autocomplete-results");
+            if (query.length > 0) {
+                resultsContainer.style.display = "block"; // Mostrar el contenedor
+                clearTimeout(debounceTimer);  
+                debounceTimer = setTimeout(() => { 
                     fetch(`/autocomplete?query=${query}`)
                         .then(response => response.json())
                         .then(data => {
@@ -107,8 +121,9 @@
                             }
                         })
                         .catch(error => console.error('Error al obtener sugerencias:', error));
-                }, 300);  // Retraso de 300ms
+                }, 300);  
             } else {
+                resultsContainer.style.display = "none"; 
                 autocompleteResults.innerHTML = '';
             }
         }
@@ -118,8 +133,6 @@
                 alert('Primero inicia el juego.');
                 return;
             }
-
-            // Incrementar intentos y actualizar el contador
             attempts++;
             attemptsEl.textContent = `Intentos: ${attempts}`;
             
@@ -128,36 +141,35 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    target_game: targetGame, // Juego objetivo (a adivinar)
-                    user_guess: userGuess   // Juego propuesto por el usuario
+                    target_game: targetGame, 
+                    user_guess: userGuess  
                 })
             })
+
             .then(response => response.json())
             .then(data => {
-                if (data.message === '¡Correcto!') {
+                if (data.message === 'Correcto') {
                     // Si el usuario adivina correctamente
                     messageEl.textContent = '¡Correcto! Has adivinado el juego.';
                     messageEl.style.color = 'green';
+                    messageEl.style.fontWeight = 'bold';
                     addToHistory(userGuess, 'Correcto');
-                    guessInput.disabled = true; // Deshabilitar input después de ganar
-                    resetBtn.disabled = false; // Habilitar el botón de reinicio
+                    guessInput.disabled = true; 
+                    resetBtn.disabled = false; 
+
                     // Actualizar estadísticas de progreso
                     currentStreak++;
                     correctGuessCount++;
-                    totalScore += 10; // Puntuación por adivinar
-                } else {
-                    // Mostrar mensaje de error y similitudes
-                    messageEl.textContent = 'Incorrecto. Similitudes:';
-                    messageEl.style.color = 'red';
-                    showSimilarities(data.similarities);
-                    addToHistory(userGuess, 'Incorrecto');
+                    totalScore += 10;
+                    alert('¡Felicidades! Has adivinado el juego.');
 
+                } else {
+                    showSimilarities(data.similarities);
+                    addToHistory(userGuess, 'Incorrecto');    
                     currentStreak = 0; // Reiniciar racha si es incorrecto
                 }
 
                 saveProgress();
-
-                // Limpiar input y autocompletar después de cada intento
                 guessInput.value = '';
                 autocompleteResults.innerHTML = '';
             })
@@ -166,26 +178,17 @@
 
         function showSimilarities(similarities) {
             let similarityMessage = '';
-
-            // Iterar sobre las claves del objeto "similarities" y mostrar con colores
             Object.keys(similarities).forEach(key => {
-                let color = similarities[key].color || 'black'; // Color por defecto
+                const { value, color } = similarities[key];
                 similarityMessage += `
-                    <div class="similarity ${color}">
-                        <strong>${key}:</strong> ${similarities[key].value}
+                    <div class=" similarity ${color}" style="color: black; padding: 10px; margin: 5px 0; border-radius: 8px;">
+                        <strong>${key}:</strong> ${value}
                     </div>`;
             });
 
-            // Inyectar el mensaje en el contenedor de mensajes
-            messageEl.innerHTML = similarityMessage;
-}
-
-
-
-
-
-
-    
+            const resultsContainer = document.getElementById('results');
+            resultsContainer.innerHTML = similarityMessage;
+        }    
     
         // Agregar el intento al historial
         function addToHistory(game, result) {
@@ -282,14 +285,6 @@
             }
         }
     
-        // Mostrar las similitudes con el juego
-        function showSimilarities(similarities) {
-            let similarityMessage = '';
-            Object.keys(similarities).forEach(key => {
-                similarityMessage += `${key}: ${similarities[key]}<br>`;
-            });
-            messageEl.innerHTML = similarityMessage;
-        }
     
     </script>
 </body>

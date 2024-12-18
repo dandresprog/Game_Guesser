@@ -40,27 +40,35 @@ async def get_users_db_connection():
         yield conn
     finally:
         conn.close()
-    
-# Función similitud entre cadenas y verificar coincidencia por prefijo
+
+
+# Función para calcular la similitud entre cadenas
 def similarity_ratio(str1, str2):
     return difflib.SequenceMatcher(None, str1, str2).ratio()
 
 def compare_names(target_name, user_name):
-    # Ambos comienzan con la misma letra
-    if target_name[0].lower() == user_name[0].lower():
-        prefix_similarity = 0.8  # Un umbral bajo si empieza con la misma letra
-    else:
-        prefix_similarity = 0.0
+    # Dividir los nombres en palabras para comparar
+    target_words = target_name.lower().split()
+    user_words = user_name.lower().split()
 
-    # Usar difflib para calcular la similitud completa
+    # Contar cuántas palabras coinciden
+    common_words = set(target_words) & set(user_words)
+    word_match_count = len(common_words)
+
+    # Usar difflib para la similitud total
     full_similarity = similarity_ratio(target_name, user_name)
-    
-    # Si la similitud completa es alta o la coincidencia de prefijo es suficiente, considerarlo similar
-    if full_similarity > 0.7 or prefix_similarity > 0.7:
-        return "yellow", user_name  # Coincidencia parcial
+
+    # Establecer umbrales de similitud:
+    # - Si hay más del 50% de coincidencias de palabras, es una coincidencia parcial (amarillo).
+    # - Si la similitud general es mayor al 80% o si las palabras coinciden mucho, es una coincidencia alta (verde).
+    if word_match_count >= 3 or full_similarity > 0.8:
+        color = "green"
+    elif word_match_count > 0 or full_similarity > 0.6:
+        color = "yellow"
     else:
-        return "red", user_name  # Coincidencia baja
-    
+        color = "red"
+
+    return color, user_name
 # Función para comparar listas de elementos
 def compare_lists(target_list, user_list):
     """Compara listas para encontrar elementos comunes."""
@@ -82,7 +90,7 @@ def read_root():
 @app.get("/random-game")
 def get_random_game():
     try:
-        conn = get_videogames_db_connection()
+        conn = get_videogames_db_connection()  # Obtener conexión del pool
         cursor = conn.cursor()
 
         # Seleccionar un juego aleatorio directamente desde la base de datos
@@ -134,7 +142,7 @@ def compare_game(data: dict):
         return {"error": "Invalid input data"}
 
     # Establecer la conexión a la base de datos
-    conn = get_videogames_db_connection()
+    conn = get_videogames_db_connection()  # Obtener conexión del pool
     cursor = conn.cursor()
 
     # Obtener el juego adivinado (user_guess) desde la base de datos
@@ -173,18 +181,14 @@ def compare_game(data: dict):
     print(user_game_data)
     print(target_game_data)
     
-    # Comparar las listas de elementos
-    # Comparar el nombre
-    color, name_value = compare_names(target_game_data["name"], user_game_data["name"])
+    
+
+    # Comparar el nombre usando la nueva función de similitud mejorada
+    color ,name_value= compare_names(target_game_data["name"], user_game_data["name"])
     similarities["name"] = {
         "value": name_value,
         "color": color
     }
-
-    # Verificar si el nombre coincide
-    if target_game_data["name"].lower() == user_game_data["name"].lower():
-        return JSONResponse({"message": "¡Correcto!"})
-    
         # Comparar Metacritic con flechas
     target_metacritic = float(target_game_data.get("metacritic", 0))
     user_metacritic = float(user_game_data.get("metacritic", 0))
@@ -194,7 +198,6 @@ def compare_game(data: dict):
         arrow = "↓"
     else:
         arrow = "="
-
     similarities["metacritic"] = {
         "value": f"{user_metacritic} {arrow}",
         "color": "green" if user_metacritic == target_metacritic else "red"
@@ -230,9 +233,13 @@ def compare_game(data: dict):
     # Comparar Publishers
     color, value = compare_lists(target_game_data.get("publishers", ""), user_game_data.get("publishers", ""))
     similarities["publishers"] = {"value": value, "color": color}
+    
+    print (similarities)
+    if all([value["color"] == "green" for value in similarities.values()]):
+        return JSONResponse({"message": "Correcto" ,"similarities": similarities})
+    else:
+        return JSONResponse({"message": "Incorrecto","similarities": similarities})
 
-
-    return JSONResponse({"similarities": similarities})
 
 def generar_user_id():
     return str(uuid.uuid4())
@@ -302,4 +309,3 @@ async def obtener_progreso(request: Request):
         return JSONResponse(content=progress_data)
     else:
         return JSONResponse(content={}, status_code=404)
-
