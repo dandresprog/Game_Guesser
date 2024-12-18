@@ -39,4 +39,6 @@ Habra un boton de ayuda (?), donde nos indicará mejor las reglas del juego. A s
 
 ## Implementaciones Adicionales
 
--
+- Uso de webscrapping para actualizar valores desactualizados de "Metacritic" en nuestra dataset de videojuegos.
+
+- Implementación junto a Hugging Face de un consultor de pistas para ayudar al usuario.
