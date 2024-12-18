@@ -6,7 +6,6 @@ En este caso, implementaremos el nuestro basado en los mejores videojuegos de to
 
 ## Tecnologías Utilizadas
 
-
 ### Pandas
 
 Para la limpieza de nuestro dataset, eliminando los datos vacios y extrayendo la informacion interesante para nuestro proyecto, esto se puede observar en nuestro documento game_info.py.
@@ -16,7 +15,8 @@ Para la limpieza de nuestro dataset, eliminando los datos vacios y extrayendo la
 Utilizaremos docker para la creación de contenedores, crearemos una red en la cual  se basará en dos partes
 
 - Dos contenedores a modo de base de datos, una con la informacion del dataset de los videojuegos y otra con la información de registros de usuarios.
-- Otros dos contenedores que actuen de capa respectivamente con uno de los mencionados anteriormente para que no haya conexion directa de parte de los usuarios con nuestra información.
+- Otro que actue de capa para que no haya conexion directa de parte de los usuarios con nuestra información.
+- Uno ultimo que sirve como carga de datos para la base de datos.
 
 ### FastApi
 
@@ -26,12 +26,17 @@ Mediante FastApi crearemos todo el backend (logica) de nuestro juego, permitiend
 
 - Levantar los contenedores con docker-compose up -d
 
-- Cargar el dataset a nuestro contenedor que nos sirve de base de datos con el programa dataset.py
-
-- Ejecutar la web mediante uvicorn main:app --reload
+- Ir a la web http://localhost:8000/
 
 ## Cómo jugar?
 
 Tendras que iniciar el juego, e ir colocando intentos aleatorios para intentar descubir que juego se ha generado, cuenta con un autocompletado que permitira ver mejor que juegos puedas seleccionar para intentar adivinar.
 
-Tendrás suficientes pistas para poder adivinarlo, ya que por cada intento si aciertas alguna de las categorias con el juego generado, se te mostrará en verde.
+Tendrás suficientes pistas para poder adivinarlo, ya que por cada intento si aciertas alguna de las categorias con el juego generado, se te mostrará en verde, o en amarillo, si te acercas.
+
+Habra un boton de ayuda (?), donde nos indicará mejor las reglas del juego. A su vez, implementamos un uso de cookies para almacenar un historial de puntos y partidas jugadas.
+
+
+## Implementaciones Adicionales
+
+-
